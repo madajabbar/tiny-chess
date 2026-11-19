@@ -1,0 +1,39 @@
+Act immediately: do NOT spend time analyzing. You already know everything you need. Write the code now.
+
+You are writing a tiny chess engine in Python 3.13 for a competition. The ENTIRE engine must be a SINGLE FILE, main.py, at most 4,096 bytes as committed. It uses ONLY the Python standard library (json, os, sys, urllib). It must read NO other file, make NO model calls, and use NO randomness.
+
+THE GAMEPLAY LOOP (exact contract — do not deviate):
+- The engine reads MAKEFUN_ENV_URL from environment. 
+- It POSTs {} to {ENV_URL}/game to get the game in play.
+- While game status == "your_move", it POSTs {"game": <n>, "move": "<uci>"} to {ENV_URL}/move.
+- A move is UCI (e.g. e2e4, e7e8q, castling = e1g1/e8c8).
+- When a game's status is "over", POST /game {} again for the next game.
+- When /game returns status "done" with wins/draws/losses, print to stderr and exit.
+- A game answer has fields: game, opponent, colour (yours), opening, start_fen, moves, fen, plies, last_move, status ("your_move"|"over"), legal_moves (yours), result, outcome, reason, next_game, move_limit_ms, max_plies.
+
+THE COMPETITION RULES:
+- Plays 8 games per trial, one against each of 8 house engines: depth-2, depth-3, depth-4, nodes-100k, nodes-250k, nodes-500k, nodes-1M, nodes-2M. These are alpha-beta searches 2-4 plies deep or up to 100k-2M nodes/move, with quiescence (captures/promotions/replies to check), transposition table, killer moves, and material+piece-square eval.
+- 4 games as white, 4 as black. Colour alternates by opponent.
+- 10 seconds per move max. 1,800s wall per trial. 1 CPU, 512MB.
+- MUST be deterministic: search to a fixed depth or fixed node count, never a clock, no unseeded randomness. The trial is replayed and must leave byte-identical state.
+- To win a prize you must BEAT the house baseline: sunfish's 4k engine (~1,325 Elo on 8-game practice). To place you need a mean Elo above it. The floor to enter the final is 1,154 Elo. Your goal: be as strong as possible — a real alpha-beta search with iterative deepening, a transposition table, and piece-square tables, all in ≤4,096 bytes.
+
+WHAT TO DO:
+1. Read the starter at /tmp/dsh/tiny-chess/main.py to learn the exact I/O loop shape. Keep the loop structure, but REPLACE the one-ply greedy logic with a real search.
+2. Write a strong engine. Recommended design (proven to be strong in tiny Python engines):
+   - Board as a list of 64 squares; use mailbox or 0x88. 0x88 is great for move generation + legality.
+   - Move generator: generate pseudo-legal moves for all pieces, then a legal-move filter that attempts the move and checks the king isn't in check. Given only ~10s/move and opponents are alpha-beta, correctness matters more than raw speed up to ~depth 4-5.
+   - Search: negamax with alpha-beta + iterative deepening to a fixed depth (e.g. depth 4-5) OR fixed node count. Add quiescence search (captures only) to avoid horizon effects.
+   - Evaluation: material (P=100,N=320,B=330,R=500,Q=900) + piece-square tables (midgame) + maybe mobility/bishop pair. The 40-line book openings mean middlegame positions.
+   - Transposition table: simple dict keyed by Zobrist hash (or the board tuple) storing (depth, score, flag). Keep it small to fit in 4KB.
+   - The strongest tiny engines (sunfish 4k) use move ordering (captures first), quiescence, and a good eval. Aim to beat sunfish.
+   - Since deterministic: use a fixed depth or node cap. Search nodes-1M and nodes-2M opponents (very strong, ~1,667-1,712 Elo) will beat most depth-5 searches — but depth-2/3/4 are beatable. Score the most points vs the weaker half.
+3. Strict size budget: main.py must be ≤4,096 bytes. After writing comfortably, MINIFY — strip comments/whitespace, shorten variable names, use clever compression. Measure with: wc -c main.py. You MUST get under 4,096. Use a gzip/lzma payload + unpacker if needed (that still counts, but the unpacker+payload must fit).
+4. Write to /tmp/dsh/tiny-chess/main.py (overwrite the starter).
+5. After writing, verify:
+   - wc -c main.py ≤ 4096
+   - It parses: python3 -c "import ast; ast.parse(open('/tmp/dsh/tiny-chess/main.py').read())"
+   - It has the correct I/O loop (read the starter's contract).
+6. Report: final byte count, the search algorithm used (depth/node cap), eval features, and any space you had left.
+
+Keep ALL code written by you. You may read the starter as reference but write every line yourself — do not paste wholesale. The starter is seed material, not your deliverable.
