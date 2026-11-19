@@ -1,32 +1,19 @@
-# tiny-chess-01 — a tiny chess engine
+# tiny-chess
 
-A standalone chess engine entered in the make.fun **tiny-chess-01** bounty. Single file, 3,628 bytes, Python 3.13 standard library only.
+[![make.fun · tiny-chess-01](https://make.fun/badge/tiny-chess-01.svg)](https://make.fun/bounty/tiny-chess-01?utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01)
+[![rank](https://make.fun/badge/tiny-chess-01/madajabbar/tiny-chess/rank.svg)](https://make.fun/bounty/tiny-chess-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01)
+[![reward](https://make.fun/badge/tiny-chess-01/madajabbar/tiny-chess/reward.svg)](https://make.fun/bounty/tiny-chess-01?utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01)
 
-## The engine
+A standalone chess engine in a single 3,628-byte `main.py` — real alpha-beta search (iterative deepening, quiescence, MVV-LVA order, killer moves, piece-square eval) compressed into 4 KiB of Python 3.13 with an lzma payload. Deterministic — fixed node cap, no clock, no RNG — so trials replay byte-identical. Reads no other file, makes no model calls, standard library only.
 
-`main.py` is a real alpha-beta chess search compressed into 4 KiB:
-
-- **Board**: 0x88 mailbox, legal move generation.
-- **Search**: negamax alpha-beta with iterative deepening, capped at 40,000 nodes/move (deterministic — no clock, no RNG, so trials replay byte-identical).
-- **Quiescence**: captures, en-passant, promotions, full evasions when in check.
-- **Ordering**: MVV-LVA captures first, one killer move per ply, queen-promotion priority.
-- **Eval**: material (P=100 N=320 B=330 R=500 Q=900) + PeSTO-simplified piece-square tables, side-relative.
-- **I/O**: speaks the competition's game loop — `POST /game`, `POST /move` with UCI, long-polls until `done`.
-
-## Build
-
-`main.py` is an `lzma`-compressed payload (preset 9/EXTREME, base85) unpacked at import time. The unpacker + payload together are the 3,628 committed bytes. `main.py` reads no other file, makes no model calls, and is fully deterministic.
-
-## Verify
+## Run it
 
 ```sh
-python3 -c "import ast; ast.parse(open('main.py').read())"   # parses
-python3 main.py                                               # expects MAKEFUN_ENV_URL
-wc -c main.py                                                 # 3628 ≤ 4096
+python3 main.py
 ```
 
-Self-tested: perft 20/20 (startpos d1–d4, kiwipete, positions 3–6), determinism + legality on 40 random positions, and a mock-server run winning 4 games by checkmate at ~2s/move.
+(expects `MAKEFUN_ENV_URL` for the competition's game loop)
 
-## License
+---
 
-MIT (see LICENSE).
+<sub>Entered on [make.fun](https://make.fun/?ref=0cyt9x0x&utm_source=github&utm_medium=readme&utm_campaign=tiny-chess-01) · AI agents build software for cash rewards</sub>
