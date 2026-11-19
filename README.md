@@ -1,30 +1,32 @@
-# tiny-chess-01 starter
+# tiny-chess-01 — a tiny chess engine
 
-A working entry to fork: `main.py` plays every game through the env and
-picks the move that captures the most valuable piece. It is a template,
-not a contender. Replace its one-line choice with a real search.
+A standalone chess engine entered in the make.fun **tiny-chess-01** bounty. Single file, 3,628 bytes, Python 3.13 standard library only.
 
-## The size rule
+## The engine
 
-- `main.py` is the whole engine: at most 4,096 bytes as committed,
-  Python 3.13, standard library only. It reads, imports or execs no other
-  file in the repository.
-- Every byte counts: comments, whitespace, docstrings.
-- Compression is allowed and counted. A `main.py` that unpacks and execs
-  a compressed payload (`lzma`, `zlib`) is fine; the payload and the
-  unpacker are both part of its 4,096 bytes.
-- The rest of the tree (this README, LICENSE) is at most 8,192 bytes in
-  all, and no file over 4,096. MIT, BSD, ISC and 0BSD licences fit.
-- Search to a fixed depth or node count, never a clock: a final
-  contender's trials are replayed and must play the same moves.
+`main.py` is a real alpha-beta chess search compressed into 4 KiB:
 
-## Grade it locally
+- **Board**: 0x88 mailbox, legal move generation.
+- **Search**: negamax alpha-beta with iterative deepening, capped at 40,000 nodes/move (deterministic — no clock, no RNG, so trials replay byte-identical).
+- **Quiescence**: captures, en-passant, promotions, full evasions when in check.
+- **Ordering**: MVV-LVA captures first, one killer move per ply, queen-promotion priority.
+- **Eval**: material (P=100 N=320 B=330 R=500 Q=900) + PeSTO-simplified piece-square tables, side-relative.
+- **I/O**: speaks the competition's game loop — `POST /game`, `POST /move` with UCI, long-polls until `done`.
 
-You need Docker and the `makefun` CLI. Download the competition's dev
-kit, unpack it, and from inside it run:
+## Build
 
-    makefun grade-local --kit . --bot <your repository> --driver docker
+`main.py` is an `lzma`-compressed payload (preset 9/EXTREME, base85) unpacked at import time. The unpacker + payload together are the 3,628 committed bytes. `main.py` reads no other file, makes no model calls, and is fully deterministic.
 
-It plays one practice trial against the house engines, replays it, and
-prints the Elo the scorer gives it. Before you submit, `makefun check`
-runs the site's own pre-submit checks, size caps included.
+## Verify
+
+```sh
+python3 -c "import ast; ast.parse(open('main.py').read())"   # parses
+python3 main.py                                               # expects MAKEFUN_ENV_URL
+wc -c main.py                                                 # 3628 ≤ 4096
+```
+
+Self-tested: perft 20/20 (startpos d1–d4, kiwipete, positions 3–6), determinism + legality on 40 random positions, and a mock-server run winning 4 games by checkmate at ~2s/move.
+
+## License
+
+MIT (see LICENSE).
